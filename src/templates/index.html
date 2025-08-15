@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>喫煙記録アプリ</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        #recordButton {
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            color: white;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #recordButton:hover {
+            background-color: #45a049;
+        }
+        #message {
+            margin-top: 1rem;
+            font-size: 1rem;
+            color: #555;
+        }
+        .info-section {
+            margin-top: 1.5rem;
+            text-align: left;
+            width: 100%;
+        }
+        .info-section p {
+            margin: 0.5rem 0;
+            font-size: 0.9rem;
+            color: #777;
+        }
+        .info-section strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>喫煙記録アプリ</h1>
+        <button id="recordButton">タバコ吸った！</button>
+        <p id="message"></p>
+
+        <div class="info-section">
+            <p>前回の喫煙時間: <span id="lastSmokingTime">{{ last_time if last_time }}</span></p>
+            <p>経過時間: <span id="elapsedTime"></span></p>
+        </div>
+    </div>
+
+    <script>
+        let lastSmokingTime = "{{ last_time }}";
+        
+        const updateElapsedTime = () => {
+            if (lastSmokingTime && lastSmokingTime !== "None") {
+                const lastTime = new Date(lastSmokingTime);
+                const now = new Date();
+                const diff = now - lastTime;
+
+                const minutes = Math.floor(diff / 1000 / 60);
+                const hours = Math.floor(minutes / 60);
+                const remainingMinutes = minutes % 60;
+                const remainingSeconds = Math.floor((diff / 1000) % 60);
+
+                document.getElementById('elapsedTime').innerText = 
+                    `${hours}時間 ${remainingMinutes}分 ${remainingSeconds}秒`;
+            } else {
+                document.getElementById('elapsedTime').innerText = "記録がありません";
+            }
+        };
+
+        // 初回表示時に経過時間を更新
+        updateElapsedTime();
+
+        // 1秒ごとに経過時間を更新
+        setInterval(updateElapsedTime, 1000);
+
+        document.getElementById('recordButton').addEventListener('click', async () => {
+            document.getElementById('message').innerText = "記録中です...";
+            
+            try {
+                const response = await fetch('/record_smoking', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+                
+                document.getElementById('message').innerText = data.message;
+
+                if (response.ok) {
+                    // 記録成功後、現在の時間を新しい喫煙時間として設定
+                    lastSmokingTime = new Date().toISOString();
+                    document.getElementById('lastSmokingTime').innerText = new Date().toLocaleString();
+                    
+                    // 経過時間を即座に更新
+                    updateElapsedTime();
+                }
+
+            } catch (error) {
+                console.error('エラー:', error);
+                document.getElementById('message').innerText = "通信エラーが発生しました。";
+            }
+        });
+    </script>
+</body>
+</html>
